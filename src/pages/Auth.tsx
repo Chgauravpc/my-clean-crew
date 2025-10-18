@@ -8,6 +8,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Sparkles } from 'lucide-react';
+import { z } from 'zod';
+
+// Validation schemas
+const signInSchema = z.object({
+  email: z.string().email('Invalid email address').max(255),
+  password: z.string().min(1, 'Password is required'),
+});
+
+const signUpBaseSchema = z.object({
+  email: z.string().email('Invalid email address').max(255),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(72),
+  fullName: z.string().trim().min(2, 'Name must be at least 2 characters').max(100),
+  phone: z.string().regex(/^\d{10}$/, 'Phone number must be exactly 10 digits').optional().or(z.literal('')),
+});
+
+const maidSignUpSchema = signUpBaseSchema.extend({
+  hourlyRate: z.coerce.number().positive('Hourly rate must be positive').max(10000, 'Hourly rate must be less than ₹10,000'),
+  dailyRate: z.coerce.number().positive('Daily rate must be positive').max(50000, 'Daily rate must be less than ₹50,000'),
+  monthlyRate: z.coerce.number().positive('Monthly rate must be positive').max(500000, 'Monthly rate must be less than ₹5,00,000'),
+  location: z.string().trim().min(3, 'Location must be at least 3 characters').max(200),
+  description: z.string().max(500, 'Description must be less than 500 characters').optional(),
+});
 
 const Auth = () => {
   const [loading, setLoading] = useState(false);
@@ -34,6 +56,18 @@ const Auth = () => {
     setLoading(true);
 
     try {
+      // Validate input
+      const validation = signInSchema.safeParse(signInData);
+      if (!validation.success) {
+        toast({
+          title: 'Validation Error',
+          description: validation.error.errors[0].message,
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email: signInData.email,
         password: signInData.password,
@@ -74,14 +108,30 @@ const Auth = () => {
     setLoading(true);
 
     try {
+      // Validate input based on role
+      const schema = role === 'maid' ? maidSignUpSchema : signUpBaseSchema;
+      const validation = schema.safeParse(signUpData);
+      
+      if (!validation.success) {
+        toast({
+          title: 'Validation Error',
+          description: validation.error.errors[0].message,
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+
+      const validatedData = validation.data;
+
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: signUpData.email,
-        password: signUpData.password,
+        email: validatedData.email,
+        password: validatedData.password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
           data: {
-            full_name: signUpData.fullName,
-            phone: signUpData.phone,
+            full_name: validatedData.fullName,
+            phone: validatedData.phone || null,
           },
         },
       });
@@ -106,7 +156,7 @@ const Auth = () => {
             daily_rate: parseFloat(signUpData.dailyRate),
             monthly_rate: parseFloat(signUpData.monthlyRate),
             location: signUpData.location,
-            description: signUpData.description,
+            description: signUpData.description || null,
           });
 
         if (maidError) throw maidError;
