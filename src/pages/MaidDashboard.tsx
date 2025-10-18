@@ -79,7 +79,7 @@ const MaidDashboard = () => {
         .from('jobs')
         .select(`
           *,
-          profiles!jobs_customer_id_fkey(full_name)
+          profiles!customer_id(full_name)
         `)
         .eq('maid_id', maidData.id)
         .order('created_at', { ascending: false });
