@@ -1,14 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Sparkles } from 'lucide-react';
 import { z } from 'zod';
+import '../styles/auth.css';
 
 // Validation schemas
 const signInSchema = z.object({
@@ -34,6 +30,7 @@ const maidSignUpSchema = signUpBaseSchema.extend({
 const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState<'customer' | 'maid'>('customer');
+  const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -43,7 +40,6 @@ const Auth = () => {
     password: '',
     fullName: '',
     phone: '',
-    // Maid-specific fields
     hourlyRate: '',
     dailyRate: '',
     monthlyRate: '',
@@ -56,7 +52,6 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      // Validate input
       const validation = signInSchema.safeParse(signInData);
       if (!validation.success) {
         toast({
@@ -80,7 +75,6 @@ const Auth = () => {
         description: 'You have successfully signed in.',
       });
 
-      // Fetch user role to redirect appropriately
       const { data: roleData } = await supabase
         .from('user_roles')
         .select('role')
@@ -108,7 +102,6 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      // Validate input based on role
       const schema = role === 'maid' ? maidSignUpSchema : signUpBaseSchema;
       const validation = schema.safeParse(signUpData);
       
@@ -139,14 +132,12 @@ const Auth = () => {
       if (authError) throw authError;
       if (!authData.user) throw new Error('Registration failed');
 
-      // Insert user role
       const { error: roleError } = await supabase
         .from('user_roles')
         .insert({ user_id: authData.user.id, role });
 
       if (roleError) throw roleError;
 
-      // If maid, create maid profile
       if (role === 'maid') {
         const { error: maidError } = await supabase
           .from('maids')
@@ -184,195 +175,228 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted to-background p-4">
-      <Card className="w-full max-w-md shadow-[var(--shadow-lg)]">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="p-3 bg-gradient-to-br from-primary to-accent rounded-full">
-              <Sparkles className="w-8 h-8 text-primary-foreground" />
-            </div>
+    <div className="auth-container">
+      <div className="auth-card">
+        <div className="auth-header">
+          <div className="auth-logo">
+            <Sparkles className="auth-logo-icon" />
           </div>
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Maidly
-          </CardTitle>
-          <CardDescription>Your trusted maid service platform</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
+          <h1 className="auth-title">Maidly</h1>
+          <p className="auth-subtitle">Your trusted maid service platform</p>
+        </div>
 
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email">Email</Label>
-                  <Input
-                    id="signin-email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={signInData.email}
-                    onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
+        <div className="tabs-container">
+          <div className="tabs-list">
+            <button
+              className={`tab-trigger ${activeTab === 'signin' ? 'active' : ''}`}
+              onClick={() => setActiveTab('signin')}
+            >
+              Sign In
+            </button>
+            <button
+              className={`tab-trigger ${activeTab === 'signup' ? 'active' : ''}`}
+              onClick={() => setActiveTab('signup')}
+            >
+              Sign Up
+            </button>
+          </div>
+        </div>
+
+        {activeTab === 'signin' ? (
+          <form onSubmit={handleSignIn} className="auth-form">
+            <div className="form-group">
+              <label htmlFor="signin-email" className="form-label">Email</label>
+              <input
+                id="signin-email"
+                type="email"
+                placeholder="Enter your email"
+                className="form-input"
+                value={signInData.email}
+                onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="signin-password" className="form-label">Password</label>
+              <input
+                id="signin-password"
+                type="password"
+                placeholder="Enter your password"
+                className="form-input"
+                value={signInData.password}
+                onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
+                required
+              />
+            </div>
+            <button type="submit" className="submit-btn" disabled={loading}>
+              {loading ? (
+                <span className="btn-loading">
+                  <span className="btn-spinner"></span>
+                  Signing in...
+                </span>
+              ) : 'Sign In'}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleSignUp} className="auth-form">
+            <div className="form-group">
+              <label className="form-label">I am a</label>
+              <div className="radio-group">
+                <label className="radio-item">
+                  <input
+                    type="radio"
+                    name="role"
+                    value="customer"
+                    className="radio-input"
+                    checked={role === 'customer'}
+                    onChange={() => setRole('customer')}
+                  />
+                  <span className="radio-label">Customer</span>
+                </label>
+                <label className="radio-item">
+                  <input
+                    type="radio"
+                    name="role"
+                    value="maid"
+                    className="radio-input"
+                    checked={role === 'maid'}
+                    onChange={() => setRole('maid')}
+                  />
+                  <span className="radio-label">Maid</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="signup-name" className="form-label">Full Name</label>
+              <input
+                id="signup-name"
+                type="text"
+                placeholder="Enter your full name"
+                className="form-input"
+                value={signUpData.fullName}
+                onChange={(e) => setSignUpData({ ...signUpData, fullName: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="signup-email" className="form-label">Email</label>
+              <input
+                id="signup-email"
+                type="email"
+                placeholder="Enter your email"
+                className="form-input"
+                value={signUpData.email}
+                onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="signup-password" className="form-label">Password</label>
+              <input
+                id="signup-password"
+                type="password"
+                placeholder="Create a password"
+                className="form-input"
+                value={signUpData.password}
+                onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="signup-phone" className="form-label">Phone</label>
+              <input
+                id="signup-phone"
+                type="tel"
+                placeholder="Enter your phone number"
+                className="form-input"
+                value={signUpData.phone}
+                onChange={(e) => setSignUpData({ ...signUpData, phone: e.target.value })}
+              />
+            </div>
+
+            {role === 'maid' && (
+              <div className="maid-fields">
+                <div className="form-group">
+                  <label htmlFor="signup-location" className="form-label">Location</label>
+                  <input
+                    id="signup-location"
+                    type="text"
+                    placeholder="e.g., Sector 5, Noida"
+                    className="form-input"
+                    value={signUpData.location}
+                    onChange={(e) => setSignUpData({ ...signUpData, location: e.target.value })}
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signin-password">Password</Label>
-                  <Input
-                    id="signin-password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={signInData.password}
-                    onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Signing in...' : 'Sign In'}
-                </Button>
-              </form>
-            </TabsContent>
 
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>I am a</Label>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant={role === 'customer' ? 'default' : 'outline'}
-                      className="flex-1"
-                      onClick={() => setRole('customer')}
-                    >
-                      Customer
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={role === 'maid' ? 'default' : 'outline'}
-                      className="flex-1"
-                      onClick={() => setRole('maid')}
-                    >
-                      Maid
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Full Name</Label>
-                  <Input
-                    id="signup-name"
-                    placeholder="Enter your full name"
-                    value={signUpData.fullName}
-                    onChange={(e) => setSignUpData({ ...signUpData, fullName: e.target.value })}
+                <div className="form-group">
+                  <label htmlFor="hourly-rate" className="form-label">Hourly Rate (₹)</label>
+                  <input
+                    id="hourly-rate"
+                    type="number"
+                    placeholder="100"
+                    className="form-input"
+                    value={signUpData.hourlyRate}
+                    onChange={(e) => setSignUpData({ ...signUpData, hourlyRate: e.target.value })}
                     required
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={signUpData.email}
-                    onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
+                <div className="form-group">
+                  <label htmlFor="daily-rate" className="form-label">Daily Rate (₹)</label>
+                  <input
+                    id="daily-rate"
+                    type="number"
+                    placeholder="500"
+                    className="form-input"
+                    value={signUpData.dailyRate}
+                    onChange={(e) => setSignUpData({ ...signUpData, dailyRate: e.target.value })}
                     required
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="Create a password"
-                    value={signUpData.password}
-                    onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
+                <div className="form-group">
+                  <label htmlFor="monthly-rate" className="form-label">Monthly Rate (₹)</label>
+                  <input
+                    id="monthly-rate"
+                    type="number"
+                    placeholder="8000"
+                    className="form-input"
+                    value={signUpData.monthlyRate}
+                    onChange={(e) => setSignUpData({ ...signUpData, monthlyRate: e.target.value })}
                     required
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="signup-phone">Phone</Label>
-                  <Input
-                    id="signup-phone"
-                    type="tel"
-                    placeholder="Enter your phone number"
-                    value={signUpData.phone}
-                    onChange={(e) => setSignUpData({ ...signUpData, phone: e.target.value })}
+                <div className="form-group">
+                  <label htmlFor="description" className="form-label">Description (Optional)</label>
+                  <input
+                    id="description"
+                    type="text"
+                    placeholder="Tell customers about yourself"
+                    className="form-input"
+                    value={signUpData.description}
+                    onChange={(e) => setSignUpData({ ...signUpData, description: e.target.value })}
                   />
                 </div>
+              </div>
+            )}
 
-                {role === 'maid' && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-location">Location</Label>
-                      <Input
-                        id="signup-location"
-                        placeholder="e.g., Sector 5, Noida"
-                        value={signUpData.location}
-                        onChange={(e) => setSignUpData({ ...signUpData, location: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="hourly-rate">Hourly Rate</Label>
-                        <Input
-                          id="hourly-rate"
-                          type="number"
-                          placeholder="₹100"
-                          value={signUpData.hourlyRate}
-                          onChange={(e) => setSignUpData({ ...signUpData, hourlyRate: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="daily-rate">Daily Rate</Label>
-                        <Input
-                          id="daily-rate"
-                          type="number"
-                          placeholder="₹500"
-                          value={signUpData.dailyRate}
-                          onChange={(e) => setSignUpData({ ...signUpData, dailyRate: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="monthly-rate">Monthly Rate</Label>
-                        <Input
-                          id="monthly-rate"
-                          type="number"
-                          placeholder="₹8000"
-                          value={signUpData.monthlyRate}
-                          onChange={(e) => setSignUpData({ ...signUpData, monthlyRate: e.target.value })}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Description (Optional)</Label>
-                      <Input
-                        id="description"
-                        placeholder="Tell customers about yourself"
-                        value={signUpData.description}
-                        onChange={(e) => setSignUpData({ ...signUpData, description: e.target.value })}
-                      />
-                    </div>
-                  </>
-                )}
-
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Creating account...' : 'Create Account'}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+            <button type="submit" className="submit-btn" disabled={loading}>
+              {loading ? (
+                <span className="btn-loading">
+                  <span className="btn-spinner"></span>
+                  Creating account...
+                </span>
+              ) : 'Create Account'}
+            </button>
+          </form>
+        )}
+      </div>
     </div>
   );
 };

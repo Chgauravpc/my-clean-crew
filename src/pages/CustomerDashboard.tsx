@@ -2,16 +2,9 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/integrations/supabase/auth';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Star, MapPin, Calendar, Clock, IndianRupee } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { LogOut, Star, MapPin, Users } from 'lucide-react';
+import '../styles/customer-dashboard.css';
 
 interface Maid {
   id: string;
@@ -190,218 +183,202 @@ const CustomerDashboard = () => {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
+      <div className="loading-container">
+        <div className="spinner"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="bg-card border-b shadow-[var(--shadow-card)]">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Maidly Customer
-          </h1>
-          <Button onClick={signOut} variant="outline">
-            <LogOut className="w-4 h-4 mr-2" />
+    <div className="dashboard-container">
+      <header className="dashboard-header">
+        <div className="header-content">
+          <h1 className="header-title">Maidly Customer</h1>
+          <button onClick={signOut} className="logout-btn">
+            <LogOut className="w-4 h-4" style={{ marginRight: '0.5rem', display: 'inline' }} />
             Sign Out
-          </Button>
+          </button>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="maids" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8">
-            <TabsTrigger value="maids">Find Maids</TabsTrigger>
-            <TabsTrigger value="jobs">My Jobs</TabsTrigger>
-          </TabsList>
+      <main className="dashboard-main">
+        <div className="welcome-section">
+          <h2 className="welcome-title">Find Your Perfect Maid</h2>
+          <p className="welcome-text">Browse and book trusted cleaning professionals in your area</p>
+        </div>
 
-          <TabsContent value="maids">
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <section>
+          <h2 className="section-title">Available Maids</h2>
+          {maids.length === 0 ? (
+            <div className="empty-state">
+              <Users className="empty-icon" />
+              <h3 className="empty-title">No maids available</h3>
+              <p className="empty-text">Check back later for available professionals</p>
+            </div>
+          ) : (
+            <div className="maids-grid">
               {maids.map((maid) => (
-                <Card key={maid.id} className="shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-lg)] transition-shadow">
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      {maid.profiles.full_name}
-                      <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 fill-accent text-accent" />
-                        <span className="text-sm font-normal">{maid.rating.toFixed(1)}</span>
-                      </div>
-                    </CardTitle>
-                    <CardDescription className="flex items-center gap-1">
-                      <MapPin className="w-4 h-4" />
-                      {maid.location}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {maid.description && (
-                      <p className="text-sm text-muted-foreground">{maid.description}</p>
-                    )}
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Hourly:</span>
-                        <span className="font-medium">₹{maid.hourly_rate}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Daily:</span>
-                        <span className="font-medium">₹{maid.daily_rate}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Monthly:</span>
-                        <span className="font-medium">₹{maid.monthly_rate}</span>
+                <article key={maid.id} className="maid-card">
+                  <div className="maid-header">
+                    <div className="maid-info">
+                      <h3 className="maid-name">{maid.profiles.full_name}</h3>
+                      <div className="maid-location">
+                        <MapPin style={{ width: '1rem', height: '1rem', display: 'inline', verticalAlign: 'middle', marginRight: '0.25rem' }} />
+                        {maid.location}
                       </div>
                     </div>
-                    <Badge variant="secondary" className="w-full justify-center">
-                      {maid.completed_jobs} jobs completed
-                    </Badge>
-                    <Dialog open={bookingOpen && selectedMaid?.id === maid.id} onOpenChange={setBookingOpen}>
-                      <DialogTrigger asChild>
-                        <Button
-                          className="w-full"
-                          onClick={() => {
-                            setSelectedMaid(maid);
-                            setBookingOpen(true);
-                          }}
-                        >
-                          Book Now
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Book {maid.profiles.full_name}</DialogTitle>
-                          <DialogDescription>Fill in the details for your booking</DialogDescription>
-                        </DialogHeader>
-                        <form onSubmit={handleBookMaid} className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="date">Date</Label>
-                            <Input
-                              id="date"
-                              type="date"
-                              value={bookingData.date}
-                              onChange={(e) => setBookingData({ ...bookingData, date: e.target.value })}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="job-type">Job Type</Label>
-                            <Select
-                              value={bookingData.jobType}
-                              onValueChange={(value: 'hourly' | 'daily' | 'monthly') =>
-                                setBookingData({ ...bookingData, jobType: value })
-                              }
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="hourly">Hourly (₹{maid.hourly_rate})</SelectItem>
-                                <SelectItem value="daily">Daily (₹{maid.daily_rate})</SelectItem>
-                                <SelectItem value="monthly">Monthly (₹{maid.monthly_rate})</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="duration">Duration</Label>
-                            <Input
-                              id="duration"
-                              placeholder="e.g., 2 hours, 1 day, 1 month"
-                              value={bookingData.duration}
-                              onChange={(e) => setBookingData({ ...bookingData, duration: e.target.value })}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="location">Location</Label>
-                            <Input
-                              id="location"
-                              placeholder="Enter service location"
-                              value={bookingData.location}
-                              onChange={(e) => setBookingData({ ...bookingData, location: e.target.value })}
-                              required
-                            />
-                          </div>
-                          <Button type="submit" className="w-full">
-                            Confirm Booking
-                          </Button>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
-                  </CardContent>
-                </Card>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <Star style={{ width: '1rem', height: '1rem', fill: 'hsl(var(--primary))', color: 'hsl(var(--primary))' }} />
+                      <span>{maid.rating.toFixed(1)}</span>
+                    </div>
+                  </div>
+
+                  {maid.description && (
+                    <p className="maid-description">{maid.description}</p>
+                  )}
+
+                  <div className="rates-section">
+                    <h4 className="rates-title">Service Rates</h4>
+                    <div className="rates-list">
+                      <div className="rate-item">
+                        <span className="rate-label">Hourly:</span>
+                        <span className="rate-value">₹{maid.hourly_rate}</span>
+                      </div>
+                      <div className="rate-item">
+                        <span className="rate-label">Daily:</span>
+                        <span className="rate-value">₹{maid.daily_rate}</span>
+                      </div>
+                      <div className="rate-item">
+                        <span className="rate-label">Monthly:</span>
+                        <span className="rate-value">₹{maid.monthly_rate}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: '0.875rem', textAlign: 'center', color: 'hsl(var(--muted-foreground))', marginBottom: '0.75rem' }}>
+                    {maid.completed_jobs} jobs completed
+                  </div>
+
+                  <button
+                    className="contact-btn"
+                    onClick={() => {
+                      setSelectedMaid(maid);
+                      setBookingOpen(true);
+                    }}
+                  >
+                    Book Now
+                  </button>
+                </article>
               ))}
             </div>
-          </TabsContent>
-
-          <TabsContent value="jobs">
-            <div className="space-y-4">
-              {jobs.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <p className="text-muted-foreground">No jobs yet. Start by booking a maid!</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                jobs.map((job) => (
-                  <Card key={job.id} className="shadow-[var(--shadow-card)]">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle>{job.maids.profiles.full_name}</CardTitle>
-                          <CardDescription className="flex items-center gap-4 mt-2">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-4 h-4" />
-                              {new Date(job.job_date).toLocaleDateString()}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
-                              {job.duration}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <MapPin className="w-4 h-4" />
-                              {job.location}
-                            </span>
-                          </CardDescription>
-                        </div>
-                        <Badge
-                          variant={
-                            job.status === 'completed'
-                              ? 'default'
-                              : job.status === 'accepted'
-                              ? 'secondary'
-                              : job.status === 'cancelled'
-                              ? 'destructive'
-                              : 'outline'
-                          }
-                        >
-                          {job.status}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <IndianRupee className="w-5 h-5 text-primary" />
-                          <span className="text-2xl font-bold">₹{job.amount}</span>
-                          <span className="text-sm text-muted-foreground">({job.job_type})</span>
-                        </div>
-                        {job.status === 'pending' && (
-                          <Button variant="destructive" onClick={() => cancelJob(job.id)}>
-                            Cancel
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
+          )}
+        </section>
       </main>
+
+      {bookingOpen && selectedMaid && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 50,
+            padding: '1rem',
+          }}
+          onClick={() => setBookingOpen(false)}
+        >
+          <div
+            style={{
+              background: 'hsl(var(--card))',
+              borderRadius: '0.75rem',
+              padding: '1.5rem',
+              maxWidth: '28rem',
+              width: '100%',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+              Book {selectedMaid.profiles.full_name}
+            </h3>
+            <p style={{ color: 'hsl(var(--muted-foreground))', marginBottom: '1rem' }}>
+              Fill in the details for your booking
+            </p>
+            <form onSubmit={handleBookMaid} className="auth-form">
+              <div className="form-group">
+                <label htmlFor="date" className="form-label">Date</label>
+                <input
+                  id="date"
+                  type="date"
+                  className="form-input"
+                  value={bookingData.date}
+                  onChange={(e) => setBookingData({ ...bookingData, date: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="job-type" className="form-label">Job Type</label>
+                <select
+                  id="job-type"
+                  className="form-input"
+                  value={bookingData.jobType}
+                  onChange={(e) => setBookingData({ ...bookingData, jobType: e.target.value as any })}
+                  required
+                >
+                  <option value="hourly">Hourly (₹{selectedMaid.hourly_rate})</option>
+                  <option value="daily">Daily (₹{selectedMaid.daily_rate})</option>
+                  <option value="monthly">Monthly (₹{selectedMaid.monthly_rate})</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="duration" className="form-label">Duration</label>
+                <input
+                  id="duration"
+                  type="text"
+                  placeholder="e.g., 2 hours, 1 day, 1 month"
+                  className="form-input"
+                  value={bookingData.duration}
+                  onChange={(e) => setBookingData({ ...bookingData, duration: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="location" className="form-label">Location</label>
+                <input
+                  id="location"
+                  type="text"
+                  placeholder="Enter service location"
+                  className="form-input"
+                  value={bookingData.location}
+                  onChange={(e) => setBookingData({ ...bookingData, location: e.target.value })}
+                  required
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setBookingOpen(false)}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '0.375rem',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="submit-btn" style={{ flex: 1 }}>
+                  Confirm Booking
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
